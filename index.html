@@ -236,8 +236,11 @@
       setSdkStatus('⏳ جاري إرسال handshake لسلة...', '');
 
       try {
-        // init() يرسل postMessage لسلة ليُزيل الـ skeleton ويؤكد الاتصال
-        const result = await sdk.init();
+        // نمرر parentOrigin لأن SDK يرفض الرسائل من origins غير موثوقة
+        // بدونه: "[EmbeddedPage] Blocked message from untrusted origin"
+        const result = await sdk.init({ 
+          parentOrigin: 'https://s.salla.sa' 
+        });
 
         log(`init() نجح — النتيجة: ${JSON.stringify(result || 'ok')}`, 'lg');
         setResult('sdk-init', '✅', 'handshake ناجح', 'pass');
