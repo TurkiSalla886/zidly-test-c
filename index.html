@@ -1,491 +1,304 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zidly TEST C — Embedded SDK Validation v2</title>
-
-  <!--
-    Salla Embedded SDK — try multiple loading strategies
-    The package is brand-new (Feb 2026) so the exact CDN path is uncertain
-  -->
-  <script>
-    // Strategy: dynamically try multiple CDN URLs
-    window._zidlySdkLoadAttempts = [];
-
-    function tryLoadScript(url) {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = url;
-        script.onload = () => {
-          window._zidlySdkLoadAttempts.push({ url, status: 'loaded' });
-          resolve(url);
-        };
-        script.onerror = () => {
-          window._zidlySdkLoadAttempts.push({ url, status: 'failed' });
-          reject(new Error('Failed: ' + url));
-        };
-        document.head.appendChild(script);
-      });
-    }
-
-    // Try multiple CDN sources in sequence
-    const cdnSources = [
-      'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk',  // default entry from package.json
-      'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk@latest/dist/index.umd.js',
-      'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk@0.2.3/dist/index.umd.js',
-      'https://unpkg.com/@salla.sa/embedded-sdk',
-      'https://unpkg.com/@salla.sa/embedded-sdk@latest',
-      'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk/dist/index.js',
-      'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk/dist/embedded-sdk.umd.js',
-    ];
-
-    // Load all in parallel — first one to succeed wins
-    cdnSources.forEach(url => {
-      tryLoadScript(url).catch(() => {/* silent — we'll report all attempts */});
-    });
-  </script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zidly — TEST C</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, "Segoe UI", "Tahoma", sans-serif;
-      background: #f5f7fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
       padding: 20px;
-      line-height: 1.6;
+      min-height: 100vh;
     }
-    .container { max-width: 800px; margin: 0 auto; }
-    h1 { color: #2c3e50; margin-bottom: 8px; font-size: 24px; }
-    .subtitle { color: #7f8c8d; margin-bottom: 24px; font-size: 14px; }
-
-    .test-card {
-      background: white;
-      border-radius: 8px;
-      padding: 16px 20px;
-      margin-bottom: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      border-right: 4px solid #ddd;
-      transition: border-color 0.2s;
-    }
-    .test-card.pass { border-right-color: #27ae60; }
-    .test-card.fail { border-right-color: #e74c3c; }
-    .test-card.pending { border-right-color: #f39c12; }
-    .test-card.info { border-right-color: #3498db; }
-
-    .test-name {
-      font-weight: 600;
-      font-size: 15px;
-      color: #2c3e50;
+    h1 {
+      font-size: 1.4rem;
+      color: #38bdf8;
       margin-bottom: 4px;
     }
-    .test-result {
-      font-size: 13px;
-      color: #555;
-      font-family: "Courier New", monospace;
-      background: #f8f9fa;
-      padding: 8px 12px;
-      border-radius: 4px;
-      margin-top: 6px;
+    .subtitle {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+    .status-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .status-box h2 {
+      font-size: 0.95rem;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+    .item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid #1e293b;
+      font-size: 0.88rem;
+    }
+    .item:last-child { border-bottom: none; }
+    .badge {
+      display: inline-block;
+      min-width: 22px;
+      text-align: center;
+      font-size: 1rem;
+      line-height: 1.4;
+      flex-shrink: 0;
+    }
+    .label { flex: 1; }
+    .value {
+      color: #94a3b8;
+      font-size: 0.8rem;
+      font-family: monospace;
+      max-width: 220px;
       word-break: break-all;
-      white-space: pre-wrap;
-      direction: ltr;
       text-align: left;
     }
-    .test-result.empty { color: #999; font-style: italic; }
-
-    .summary {
-      background: #2c3e50;
-      color: white;
-      padding: 20px;
+    .pass  { color: #4ade80; }
+    .fail  { color: #f87171; }
+    .wait  { color: #facc15; }
+    .info  { color: #94a3b8; }
+    #sdk-status {
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 12px;
       border-radius: 8px;
-      margin-top: 20px;
       text-align: center;
+      margin-bottom: 14px;
+      background: #1e3a5f;
+      border: 1px solid #3b82f6;
+      color: #93c5fd;
     }
-    .summary.pass { background: #27ae60; }
-    .summary.fail { background: #e74c3c; }
-    .summary h2 { font-size: 18px; margin-bottom: 8px; }
-    .summary p { font-size: 14px; opacity: 0.9; }
-    .version-tag {
-      display: inline-block;
-      background: #3498db;
-      color: white;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      margin-right: 8px;
+    #sdk-status.ready   { background: #14532d; border-color: #22c55e; color: #86efac; }
+    #sdk-status.error   { background: #450a0a; border-color: #ef4444; color: #fca5a5; }
+    #log {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: monospace;
+      font-size: 0.78rem;
+      color: #64748b;
+      max-height: 180px;
+      overflow-y: auto;
     }
+    #log .lg { color: #4ade80; }
+    #log .lw { color: #facc15; }
+    #log .le { color: #f87171; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1><span class="version-tag">v2</span>🧪 Zidly TEST C — Embedded SDK Validation</h1>
-    <p class="subtitle">يفحص هذا الاختبار 8 جوانب من المعمارية الهجينة. النتائج ستظهر تلقائياً (انتظر 12 ثانية).</p>
 
-    <div class="test-card pending" id="test-1">
-      <div class="test-name">1️⃣ هل نعمل داخل iframe؟</div>
-      <div class="test-result" id="result-1">جاري الفحص...</div>
+  <h1>🧪 Zidly — TEST C</h1>
+  <p class="subtitle">اختبار Embedded SDK داخل iframe سلة</p>
+
+  <!-- حالة الـ SDK — أهم عنصر في الصفحة -->
+  <div id="sdk-status">⏳ جاري تهيئة SDK...</div>
+
+  <!-- نتائج الاختبارات -->
+  <div class="status-box">
+    <h2>نتائج الفحوصات التلقائية</h2>
+
+    <div class="item">
+      <span class="badge" id="r-env">⏳</span>
+      <span class="label">البيئة</span>
+      <span class="value" id="v-env">—</span>
     </div>
 
-    <div class="test-card pending" id="test-2">
-      <div class="test-name">2️⃣ ما هو origin الصفحة الأم (Parent)؟</div>
-      <div class="test-result" id="result-2">جاري الفحص...</div>
+    <div class="item">
+      <span class="badge" id="r-sdk-load">⏳</span>
+      <span class="label">تحميل SDK</span>
+      <span class="value" id="v-sdk-load">—</span>
     </div>
 
-    <div class="test-card pending" id="test-3">
-      <div class="test-name">3️⃣ هل تحميل @salla.sa/embedded-sdk نجح؟</div>
-      <div class="test-result" id="result-3">جاري المحاولة من 7 مصادر CDN...</div>
+    <div class="item">
+      <span class="badge" id="r-sdk-init">⏳</span>
+      <span class="label">init() handshake</span>
+      <span class="value" id="v-sdk-init">—</span>
     </div>
 
-    <div class="test-card pending" id="test-4">
-      <div class="test-name">4️⃣ ما هي الدوال (methods) المتاحة في SDK؟</div>
-      <div class="test-result" id="result-4">جاري الفحص...</div>
+    <div class="item">
+      <span class="badge" id="r-token">⏳</span>
+      <span class="label">Access Token</span>
+      <span class="value" id="v-token">—</span>
     </div>
 
-    <div class="test-card pending" id="test-5">
-      <div class="test-name">5️⃣ هل تهيئة SDK نجحت؟</div>
-      <div class="test-result" id="result-5">جاري الفحص...</div>
+    <div class="item">
+      <span class="badge" id="r-merchant">⏳</span>
+      <span class="label">Merchant ID</span>
+      <span class="value" id="v-merchant">—</span>
     </div>
 
-    <div class="test-card pending" id="test-6">
-      <div class="test-name">6️⃣ ما هي الرسائل التي ترسلها سلة عبر postMessage؟</div>
-      <div class="test-result empty" id="result-6">في انتظار رسائل من سلة (10 ثوانٍ)...</div>
+    <div class="item">
+      <span class="badge" id="r-latency">⏳</span>
+      <span class="label">CDN Latency</span>
+      <span class="value" id="v-latency">—</span>
     </div>
 
-    <div class="test-card pending" id="test-7">
-      <div class="test-name">7️⃣ زمن الاستجابة لـ endpoint خارجي (Latency)</div>
-      <div class="test-result" id="result-7">جاري القياس (3 محاولات)...</div>
-    </div>
-
-    <div class="test-card pending" id="test-8">
-      <div class="test-name">8️⃣ هل CSP يسمح بتحميل scripts خارجية؟</div>
-      <div class="test-result" id="result-8">جاري الفحص...</div>
-    </div>
-
-    <div class="summary pending" id="summary">
-      <h2>⏳ جارٍ تنفيذ الاختبارات...</h2>
-      <p>انتظر 12-15 ثانية لاكتمال كل الفحوصات.</p>
+    <div class="item">
+      <span class="badge" id="r-pm">⏳</span>
+      <span class="label">postMessage events</span>
+      <span class="value" id="v-pm">—</span>
     </div>
   </div>
 
+  <!-- سجل الأحداث -->
+  <div class="status-box">
+    <h2>سجل الأحداث (Log)</h2>
+    <div id="log"></div>
+  </div>
+
   <script>
-    const results = {};
+    // ─── أدوات مساعدة ──────────────────────────────────────────────
+    const $ = id => document.getElementById(id);
+    const t0 = Date.now();
 
-    function setResult(testNum, status, content) {
-      const card = document.getElementById('test-' + testNum);
-      const result = document.getElementById('result-' + testNum);
-      card.classList.remove('pending', 'pass', 'fail', 'info');
-      card.classList.add(status);
-      result.classList.remove('empty');
-      result.textContent = content;
-      results[testNum] = { status, content };
-      updateSummary();
+    function log(msg, type = '') {
+      const el = $('log');
+      const line = document.createElement('div');
+      line.className = type;
+      line.textContent = `[${Date.now() - t0}ms] ${msg}`;
+      el.prepend(line);    // أحدث في الأعلى
     }
 
-    function updateSummary() {
-      const summary = document.getElementById('summary');
-      const total = Object.keys(results).length;
-      if (total < 8) return;
-
-      const passes = Object.values(results).filter(r => r.status === 'pass').length;
-      const fails = Object.values(results).filter(r => r.status === 'fail').length;
-      const inIframe = window.self !== window.top;
-
-      // Adaptive judgment based on context
-      if (inIframe) {
-        // Inside iframe — strict criteria
-        if (passes >= 5 && fails <= 2) {
-          summary.classList.remove('pending', 'fail');
-          summary.classList.add('pass');
-          summary.innerHTML = `
-            <h2>✅ Hybrid Architecture قابلة للتطبيق</h2>
-            <p>${passes}/8 اختبارات نجحت. يمكن المضي قدماً في Phase 1 بثقة.</p>
-          `;
-        } else {
-          summary.classList.remove('pending', 'pass');
-          summary.classList.add('fail');
-          summary.innerHTML = `
-            <h2>⚠️ نتائج تحتاج مراجعة</h2>
-            <p>${passes} نجاح، ${fails} فشل. أرسل screenshot للتحليل.</p>
-          `;
-        }
-      } else {
-        // Direct browser test — relaxed criteria
-        summary.classList.remove('pending');
-        summary.classList.add('info');
-        summary.style.background = '#3498db';
-        summary.innerHTML = `
-          <h2>ℹ️ اختبار مباشر (خارج Salla)</h2>
-          <p>${passes} نجاح، ${fails} فشل. الاختبار الحقيقي داخل Salla iframe.</p>
-        `;
-      }
+    function setResult(id, icon, value, cls) {
+      const badge = $(`r-${id}`);
+      const val   = $(`v-${id}`);
+      badge.textContent = icon;
+      badge.className   = `badge ${cls}`;
+      if (val) val.textContent = value;
     }
 
-    // ==========================================
-    // TEST 1: iframe detection
-    // ==========================================
-    try {
-      const inIframe = window.self !== window.top;
-      if (inIframe) {
-        setResult(1, 'pass', '✅ نعم، نحن داخل iframe (window.self !== window.top)');
-      } else {
-        setResult(1, 'info', 'ℹ️ نعمل في تبويب مستقل (ليس iframe).\nهذا طبيعي لو فتحت الصفحة مباشرة.');
-      }
-    } catch (e) {
-      setResult(1, 'fail', '❌ خطأ: ' + e.message);
+    function setSdkStatus(text, cls) {
+      const el = $('sdk-status');
+      el.textContent = text;
+      el.className   = cls;
     }
 
-    // ==========================================
-    // TEST 2: parent origin
-    // ==========================================
-    try {
-      const referrer = document.referrer || 'لا يوجد';
-      let parentOrigin = 'غير معروف';
-      try {
-        parentOrigin = window.parent.location.origin;
-      } catch (e) {
-        if (referrer && referrer !== 'لا يوجد') {
-          try { parentOrigin = new URL(referrer).origin; } catch {}
-        }
-      }
-      const isSalla = parentOrigin.includes('salla') || referrer.includes('salla');
-      if (isSalla) {
-        setResult(2, 'pass', `✅ Parent من سلة:\nOrigin: ${parentOrigin}\nReferrer: ${referrer}`);
-      } else if (window.self !== window.top) {
-        setResult(2, 'info', `ℹ️ داخل iframe لكن المصدر ليس سلة:\nOrigin: ${parentOrigin}\nReferrer: ${referrer}`);
-      } else {
-        setResult(2, 'info', `ℹ️ تبويب مستقل\nReferrer: ${referrer}`);
-      }
-    } catch (e) {
-      setResult(2, 'fail', '❌ خطأ: ' + e.message);
-    }
+    // ─── فحص البيئة ───────────────────────────────────────────────
+    const isInsideIframe = window !== window.parent;
+    setResult('env', isInsideIframe ? '✅' : '⚠️',
+              isInsideIframe ? 'داخل iframe سلة' : 'خارج iframe (browser مباشر)',
+              isInsideIframe ? 'pass' : 'wait');
+    log(`البيئة: ${isInsideIframe ? 'iframe' : 'browser مباشر'}`);
 
-    // ==========================================
-    // TEST 3: SDK availability (after waiting for CDN attempts)
-    // ==========================================
-    setTimeout(() => {
-      try {
-        // Check ALL window properties for anything Salla-related
-        const possibleNames = [
-          'SallaEmbeddedSDK', 'salla', 'Salla', 'SallaSDK', 'EmbeddedSDK',
-          'SallaApp', 'sallaEmbedded', 'embeddedSDK'
-        ];
-        const sdkGlobals = possibleNames.filter(name => typeof window[name] !== 'undefined');
-
-        const allSallaKeys = Object.keys(window).filter(k =>
-          /salla|embedded/i.test(k) &&
-          typeof window[k] !== 'undefined' &&
-          window[k] !== null
-        );
-
-        const attempts = window._zidlySdkLoadAttempts || [];
-        const successfulLoads = attempts.filter(a => a.status === 'loaded');
-        const failedLoads = attempts.filter(a => a.status === 'failed');
-
-        let report = `CDN Loading Attempts (${attempts.length}):\n`;
-        successfulLoads.forEach(a => report += `✅ ${a.url}\n`);
-        failedLoads.forEach(a => report += `❌ ${a.url}\n`);
-        report += '\n';
-
-        if (sdkGlobals.length > 0 || allSallaKeys.length > 0) {
-          const found = [...new Set([...sdkGlobals, ...allSallaKeys])];
-          report += `Found globals on window:\n${found.join('\n')}`;
-          window._zidlySdkGlobalName = found[0];
-          setResult(3, 'pass', '✅ SDK loaded successfully\n\n' + report);
-        } else if (successfulLoads.length > 0) {
-          report += '\n⚠️ Script loaded but no global registered.\nCheck what name SDK uses.';
-          setResult(3, 'fail', '⚠️ Script loaded but SDK global not found\n\n' + report);
-        } else {
-          report += '\n❌ All CDN attempts failed.';
-          setResult(3, 'fail', '❌ SDK could not be loaded\n\n' + report);
-        }
-      } catch (e) {
-        setResult(3, 'fail', '❌ خطأ: ' + e.message);
-      }
-    }, 3000); // Wait 3 sec for CDN attempts
-
-    // ==========================================
-    // TEST 4: SDK API discovery
-    // ==========================================
-    setTimeout(() => {
-      try {
-        const sdkName = window._zidlySdkGlobalName;
-        if (!sdkName) {
-          setResult(4, 'fail', '❌ لا يمكن الفحص بدون SDK محمّل (Test 3 فشل)');
-          return;
-        }
-        const sdk = window[sdkName];
-        let methods = [];
-        if (typeof sdk === 'function') {
-          methods = Object.getOwnPropertyNames(sdk.prototype || {});
-          methods.unshift('(class — needs `new ' + sdkName + '()`)');
-          // Also list static methods
-          methods.push('--- static ---');
-          methods.push(...Object.getOwnPropertyNames(sdk).filter(n =>
-            !['length', 'name', 'prototype'].includes(n)
-          ));
-        } else if (typeof sdk === 'object' && sdk !== null) {
-          methods = Object.keys(sdk);
-          const proto = Object.getPrototypeOf(sdk);
-          if (proto && proto !== Object.prototype) {
-            methods.push('--- prototype ---');
-            methods.push(...Object.getOwnPropertyNames(proto));
-          }
-        }
-        if (methods.length > 0) {
-          setResult(4, 'pass', `✅ تم اكتشاف API:\n\n${methods.join('\n')}`);
-        } else {
-          setResult(4, 'info', `ℹ️ SDK موجود لكن بدون methods ظاهرة.\nType: ${typeof sdk}\nValue: ${String(sdk).substring(0, 200)}`);
-        }
-      } catch (e) {
-        setResult(4, 'fail', '❌ خطأ: ' + e.message);
-      }
-    }, 3500);
-
-    // ==========================================
-    // TEST 5: SDK initialization
-    // ==========================================
-    setTimeout(() => {
-      try {
-        const sdkName = window._zidlySdkGlobalName;
-        if (!sdkName) {
-          setResult(5, 'fail', '❌ لا يمكن التهيئة بدون SDK');
-          return;
-        }
-        const SDK = window[sdkName];
-        let instance;
-        let initLog = [];
-        try {
-          if (typeof SDK === 'function') {
-            instance = new SDK();
-            initLog.push('✅ new ' + sdkName + '() نجح');
-          } else if (typeof SDK.init === 'function') {
-            SDK.init();
-            instance = SDK;
-            initLog.push('✅ ' + sdkName + '.init() نجح');
-          } else {
-            instance = SDK;
-            initLog.push('ℹ️ SDK جاهز للاستخدام مباشرة');
-          }
-        } catch (initErr) {
-          initLog.push('⚠️ تهيئة فشلت: ' + initErr.message);
-        }
-        if (instance) {
-          ['isEmbedded', 'getAuthToken', 'getMerchantId', 'getStoreInfo', 'getStore', 'getAuth', 'connect', 'init'].forEach(method => {
-            if (typeof instance[method] === 'function') {
-              try {
-                const result = instance[method]();
-                if (result && typeof result.then === 'function') {
-                  initLog.push(`📞 ${method}() — promise`);
-                  result
-                    .then(r => {
-                      initLog.push(`  ↳ resolved: ${JSON.stringify(r).substring(0, 150)}`);
-                      const card = document.getElementById('test-5');
-                      const result5 = document.getElementById('result-5');
-                      if (card.classList.contains('pass') || card.classList.contains('info')) {
-                        result5.textContent = initLog.join('\n');
-                      }
-                    })
-                    .catch(err => {
-                      initLog.push(`  ↳ rejected: ${err.message}`);
-                      const result5 = document.getElementById('result-5');
-                      result5.textContent = initLog.join('\n');
-                    });
-                } else {
-                  initLog.push(`📞 ${method}() = ${JSON.stringify(result).substring(0, 100)}`);
-                }
-              } catch (e) {
-                initLog.push(`⚠️ ${method}() threw: ${e.message}`);
-              }
-            }
-          });
-        }
-        const success = initLog.some(l => l.startsWith('✅'));
-        setResult(5, success ? 'pass' : 'info', initLog.join('\n'));
-      } catch (e) {
-        setResult(5, 'fail', '❌ خطأ: ' + e.message);
-      }
-    }, 4000);
-
-    // ==========================================
-    // TEST 6: postMessage listener
-    // ==========================================
-    const messages = [];
-    window.addEventListener('message', (event) => {
-      messages.push({
-        origin: event.origin,
-        data: typeof event.data === 'string' ? event.data : JSON.stringify(event.data).substring(0, 250),
-        time: new Date().toISOString().substring(11, 19)
-      });
+    // ─── مراقبة postMessage من سلة ────────────────────────────────
+    const pmEvents = [];
+    window.addEventListener('message', e => {
+      pmEvents.push({ origin: e.origin, type: e.data?.type || JSON.stringify(e.data).slice(0,40) });
+      log(`postMessage ← ${e.origin} | ${e.data?.type || '?'}`, 'lg');
+      setResult('pm', '✅', `${pmEvents.length} event(s)`, 'pass');
     });
-
+    // بعد 3 ثوانٍ إذا لم يصلنا شيء
     setTimeout(() => {
-      if (messages.length === 0) {
-        setResult(6, 'info', 'ℹ️ لم تُستلم أي رسائل postMessage خلال 10 ثوانٍ.\n\nقد يعني:\n- لسنا داخل iframe من سلة\n- سلة لا ترسل تلقائياً (تنتظر طلباً)\n- SDK يتعامل داخلياً');
-      } else {
-        const msgList = messages.slice(0, 8).map((m, i) =>
-          `[${i+1}] ${m.time} | from: ${m.origin}\n    ${m.data}`
-        ).join('\n\n');
-        setResult(6, 'pass', `✅ استُلمت ${messages.length} رسالة:\n\n${msgList}`);
-      }
-    }, 10000);
-
-    // ==========================================
-    // TEST 7: Network latency
-    // ==========================================
-    async function measureLatency() {
-      const samples = [];
-      const url = 'https://httpbin.org/get?ts=' + Date.now();
-      for (let i = 0; i < 3; i++) {
-        const start = performance.now();
-        try {
-          await fetch(url + '&i=' + i);
-          samples.push(Math.round(performance.now() - start));
-        } catch (e) {
-          samples.push(-1);
-        }
-      }
-      const valid = samples.filter(s => s > 0);
-      if (valid.length === 0) {
-        setResult(7, 'fail', '❌ كل المحاولات فشلت');
-        return;
-      }
-      const avg = Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
-      const status = avg < 500 ? 'pass' : avg < 1000 ? 'info' : 'fail';
-      const verdict = avg < 500 ? '✅ ممتاز للمعمارية الهجينة'
-                    : avg < 1000 ? '⚠️ مقبول لكن سيُحسَّس'
-                    : '❌ بطيء جداً';
-      setResult(7, status, `Samples: ${samples.join(', ')}ms\nAvg: ${avg}ms\nVerdict: ${verdict}`);
-    }
-    measureLatency();
-
-    // ==========================================
-    // TEST 8: CSP / external resources
-    // ==========================================
-    setTimeout(() => {
-      try {
-        const attempts = window._zidlySdkLoadAttempts || [];
-        const sdkLoaded = attempts.some(a => a.status === 'loaded');
-        const cspMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
-        const inIframe = window.self !== window.top;
-        let report = [];
-        if (sdkLoaded) {
-          report.push('✅ على الأقل CDN واحد نجح في التحميل');
-        } else {
-          report.push('⚠️ كل CDN attempts فشلت');
-        }
-        if (cspMeta) {
-          report.push(`📋 CSP meta: ${cspMeta.content.substring(0, 200)}`);
-        } else {
-          report.push('ℹ️ لا يوجد CSP meta tag (CSP من headers لو موجود)');
-        }
-        if (inIframe) {
-          report.push('💡 CSP من سلة الفعلي يُفحص هنا');
-        }
-        setResult(8, sdkLoaded ? 'pass' : 'fail', report.join('\n\n'));
-      } catch (e) {
-        setResult(8, 'fail', '❌ خطأ: ' + e.message);
+      if (pmEvents.length === 0) {
+        setResult('pm', '⚠️', 'لم تصل أي events', 'wait');
+        log('لا توجد postMessage events خلال 3 ثوانٍ', 'lw');
       }
     }, 3000);
+
+    // ─── تحميل الـ SDK ثم init() فوراً ───────────────────────────
+    const sdkUrl = 'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk';
+    const cdnStart = Date.now();
+
+    log(`جاري تحميل SDK من CDN...`);
+    setResult('sdk-load', '⏳', 'يحمّل...', 'wait');
+
+    const script = document.createElement('script');
+    script.src = sdkUrl;
+
+    script.onload = async () => {
+      const latency = Date.now() - cdnStart;
+      setResult('latency', '✅', `${latency}ms`, latency < 500 ? 'pass' : 'wait');
+      log(`SDK تحمّل في ${latency}ms`, 'lg');
+
+      // تحقق من وجود الـ global
+      const sdk = window.SallaEmbeddedSDK;
+      if (!sdk) {
+        setResult('sdk-load', '❌', 'window.SallaEmbeddedSDK غير موجود', 'fail');
+        setSdkStatus('❌ SDK غير موجود في window', 'error');
+        log('خطأ: window.SallaEmbeddedSDK = undefined', 'le');
+        return;
+      }
+
+      setResult('sdk-load', '✅', `v${sdk.version || 'unknown'}`, 'pass');
+      log(`SDK جاهز — global: window.SallaEmbeddedSDK`, 'lg');
+
+      // ─── INIT — الخطوة الأهم: Handshake مع سلة ─────────────────
+      log('جاري استدعاء SallaEmbeddedSDK.init()...');
+      setSdkStatus('⏳ جاري إرسال handshake لسلة...', '');
+
+      try {
+        // init() يرسل postMessage لسلة ليُزيل الـ skeleton ويؤكد الاتصال
+        const result = await sdk.init();
+
+        log(`init() نجح — النتيجة: ${JSON.stringify(result || 'ok')}`, 'lg');
+        setResult('sdk-init', '✅', 'handshake ناجح', 'pass');
+        setSdkStatus('✅ TEST C نجح — الاتصال مع سلة مؤكد!', 'ready');
+
+        // ─── استخراج Token و Merchant بعد init ──────────────────
+        try {
+          const token = sdk.getToken?.() || sdk.token || sdk.accessToken;
+          if (token) {
+            setResult('token', '✅', token.slice(0,20) + '…', 'pass');
+            log(`Access Token: ${token.slice(0,20)}...`, 'lg');
+          } else {
+            setResult('token', '⚠️', 'لا يوجد token — EasyMode؟', 'wait');
+            log('token غير متاح مباشرة (Easy Mode — يأتي عبر webhook)', 'lw');
+          }
+        } catch(e) {
+          setResult('token', '⚠️', 'getToken() رمى خطأ', 'wait');
+          log(`getToken error: ${e.message}`, 'lw');
+        }
+
+        try {
+          const merchant = sdk.getMerchant?.() || sdk.merchant || sdk.store;
+          if (merchant) {
+            const mid = merchant.id || merchant.store_id || JSON.stringify(merchant).slice(0,30);
+            setResult('merchant', '✅', mid, 'pass');
+            log(`Merchant: ${mid}`, 'lg');
+          } else {
+            setResult('merchant', '⚠️', 'getMerchant() فارغ', 'wait');
+            log('merchant info غير متاح مباشرة', 'lw');
+          }
+        } catch(e) {
+          setResult('merchant', '⚠️', 'getMerchant() رمى خطأ', 'wait');
+          log(`getMerchant error: ${e.message}`, 'lw');
+        }
+
+      } catch (err) {
+        // init() فشل — يعني سلة لم تقبل الـ handshake
+        setResult('sdk-init', '❌', err.message || 'init() فشل', 'fail');
+        setSdkStatus('❌ Handshake فشل — سلة لم تقبل الاتصال', 'error');
+        log(`init() error: ${err.message || err}`, 'le');
+
+        setResult('token', '—', 'N/A', 'info');
+        setResult('merchant', '—', 'N/A', 'info');
+      }
+    };
+
+    script.onerror = () => {
+      const latency = Date.now() - cdnStart;
+      setResult('sdk-load', '❌', 'CDN فشل في التحميل', 'fail');
+      setResult('latency', '❌', `${latency}ms`, 'fail');
+      setSdkStatus('❌ فشل تحميل SDK من CDN', 'error');
+      log('خطأ: فشل تحميل السكريبت من jsDelivr', 'le');
+
+      setResult('sdk-init', '—', 'N/A', 'info');
+      setResult('token', '—', 'N/A', 'info');
+      setResult('merchant', '—', 'N/A', 'info');
+    };
+
+    // أضف الـ script للصفحة — يبدأ التحميل فوراً
+    document.head.appendChild(script);
   </script>
+
 </body>
 </html>
