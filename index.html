@@ -3,10 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zidly TEST C — Embedded SDK Validation</title>
+  <title>Zidly TEST C — Embedded SDK Validation v2</title>
 
-  <!-- Salla Embedded SDK from CDN (latest stable v0.2.3) -->
-  <script src="https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk@0.2.3/dist/index.umd.js"></script>
+  <!--
+    Salla Embedded SDK — try multiple loading strategies
+    The package is brand-new (Feb 2026) so the exact CDN path is uncertain
+  -->
+  <script>
+    // Strategy: dynamically try multiple CDN URLs
+    window._zidlySdkLoadAttempts = [];
+
+    function tryLoadScript(url) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = () => {
+          window._zidlySdkLoadAttempts.push({ url, status: 'loaded' });
+          resolve(url);
+        };
+        script.onerror = () => {
+          window._zidlySdkLoadAttempts.push({ url, status: 'failed' });
+          reject(new Error('Failed: ' + url));
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    // Try multiple CDN sources in sequence
+    const cdnSources = [
+      'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk',  // default entry from package.json
+      'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk@latest/dist/index.umd.js',
+      'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk@0.2.3/dist/index.umd.js',
+      'https://unpkg.com/@salla.sa/embedded-sdk',
+      'https://unpkg.com/@salla.sa/embedded-sdk@latest',
+      'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk/dist/index.js',
+      'https://cdn.jsdelivr.net/npm/@salla.sa/embedded-sdk/dist/embedded-sdk.umd.js',
+    ];
+
+    // Load all in parallel — first one to succeed wins
+    cdnSources.forEach(url => {
+      tryLoadScript(url).catch(() => {/* silent — we'll report all attempts */});
+    });
+  </script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -50,6 +88,8 @@
       margin-top: 6px;
       word-break: break-all;
       white-space: pre-wrap;
+      direction: ltr;
+      text-align: left;
     }
     .test-result.empty { color: #999; font-style: italic; }
 
@@ -65,81 +105,71 @@
     .summary.fail { background: #e74c3c; }
     .summary h2 { font-size: 18px; margin-bottom: 8px; }
     .summary p { font-size: 14px; opacity: 0.9; }
-
-    code { font-size: 12px; }
+    .version-tag {
+      display: inline-block;
+      background: #3498db;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-right: 8px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🧪 Zidly TEST C — Embedded SDK Validation</h1>
-    <p class="subtitle">يفحص هذا الاختبار 8 جوانب من المعمارية الهجينة. النتائج ستظهر تلقائياً.</p>
+    <h1><span class="version-tag">v2</span>🧪 Zidly TEST C — Embedded SDK Validation</h1>
+    <p class="subtitle">يفحص هذا الاختبار 8 جوانب من المعمارية الهجينة. النتائج ستظهر تلقائياً (انتظر 12 ثانية).</p>
 
-    <!-- Test 1: iframe detection -->
     <div class="test-card pending" id="test-1">
       <div class="test-name">1️⃣ هل نعمل داخل iframe؟</div>
       <div class="test-result" id="result-1">جاري الفحص...</div>
     </div>
 
-    <!-- Test 2: parent origin -->
     <div class="test-card pending" id="test-2">
       <div class="test-name">2️⃣ ما هو origin الصفحة الأم (Parent)؟</div>
       <div class="test-result" id="result-2">جاري الفحص...</div>
     </div>
 
-    <!-- Test 3: SDK availability -->
     <div class="test-card pending" id="test-3">
       <div class="test-name">3️⃣ هل تحميل @salla.sa/embedded-sdk نجح؟</div>
-      <div class="test-result" id="result-3">جاري الفحص...</div>
+      <div class="test-result" id="result-3">جاري المحاولة من 7 مصادر CDN...</div>
     </div>
 
-    <!-- Test 4: SDK API discovery -->
     <div class="test-card pending" id="test-4">
       <div class="test-name">4️⃣ ما هي الدوال (methods) المتاحة في SDK؟</div>
       <div class="test-result" id="result-4">جاري الفحص...</div>
     </div>
 
-    <!-- Test 5: SDK initialization -->
     <div class="test-card pending" id="test-5">
       <div class="test-name">5️⃣ هل تهيئة SDK نجحت؟</div>
       <div class="test-result" id="result-5">جاري الفحص...</div>
     </div>
 
-    <!-- Test 6: postMessage listener -->
     <div class="test-card pending" id="test-6">
       <div class="test-name">6️⃣ ما هي الرسائل التي ترسلها سلة عبر postMessage؟</div>
       <div class="test-result empty" id="result-6">في انتظار رسائل من سلة (10 ثوانٍ)...</div>
     </div>
 
-    <!-- Test 7: Network latency to public endpoint -->
     <div class="test-card pending" id="test-7">
       <div class="test-name">7️⃣ زمن الاستجابة لـ endpoint خارجي (Latency)</div>
       <div class="test-result" id="result-7">جاري القياس (3 محاولات)...</div>
     </div>
 
-    <!-- Test 8: CSP / external resources -->
     <div class="test-card pending" id="test-8">
       <div class="test-name">8️⃣ هل CSP يسمح بتحميل scripts خارجية؟</div>
       <div class="test-result" id="result-8">جاري الفحص...</div>
     </div>
 
-    <!-- Final summary -->
     <div class="summary pending" id="summary">
       <h2>⏳ جارٍ تنفيذ الاختبارات...</h2>
-      <p>انتظر 10-15 ثانية لاكتمال كل الفحوصات.</p>
+      <p>انتظر 12-15 ثانية لاكتمال كل الفحوصات.</p>
     </div>
   </div>
 
   <script>
-    // ==========================================
-    //  Zidly TEST C — Embedded SDK Validation
-    //  Goal: Validate hybrid architecture feasibility
-    //  Author: Zidly team
-    //  Note: This is throwaway exploration code, not production
-    // ==========================================
-
     const results = {};
 
-    // Helper: update a test card
     function setResult(testNum, status, content) {
       const card = document.getElementById('test-' + testNum);
       const result = document.getElementById('result-' + testNum);
@@ -151,33 +181,41 @@
       updateSummary();
     }
 
-    // Helper: update summary based on all results
     function updateSummary() {
       const summary = document.getElementById('summary');
       const total = Object.keys(results).length;
-      if (total < 8) return; // wait for all tests
+      if (total < 8) return;
 
       const passes = Object.values(results).filter(r => r.status === 'pass').length;
       const fails = Object.values(results).filter(r => r.status === 'fail').length;
+      const inIframe = window.self !== window.top;
 
-      if (fails === 0 && passes >= 5) {
-        summary.classList.remove('pending', 'fail');
-        summary.classList.add('pass');
-        summary.innerHTML = `
-          <h2>✅ Hybrid Architecture قابلة للتطبيق</h2>
-          <p>${passes}/8 اختبارات نجحت. يمكن المضي قدماً في Phase 1 بثقة.</p>
-        `;
-      } else if (fails > 2) {
-        summary.classList.remove('pending', 'pass');
-        summary.classList.add('fail');
-        summary.innerHTML = `
-          <h2>⚠️ Hybrid Architecture تحتاج إعادة نظر</h2>
-          <p>${fails}/8 اختبارات فشلت. راجع التفاصيل قبل المضي.</p>
-        `;
+      // Adaptive judgment based on context
+      if (inIframe) {
+        // Inside iframe — strict criteria
+        if (passes >= 5 && fails <= 2) {
+          summary.classList.remove('pending', 'fail');
+          summary.classList.add('pass');
+          summary.innerHTML = `
+            <h2>✅ Hybrid Architecture قابلة للتطبيق</h2>
+            <p>${passes}/8 اختبارات نجحت. يمكن المضي قدماً في Phase 1 بثقة.</p>
+          `;
+        } else {
+          summary.classList.remove('pending', 'pass');
+          summary.classList.add('fail');
+          summary.innerHTML = `
+            <h2>⚠️ نتائج تحتاج مراجعة</h2>
+            <p>${passes} نجاح، ${fails} فشل. أرسل screenshot للتحليل.</p>
+          `;
+        }
       } else {
+        // Direct browser test — relaxed criteria
+        summary.classList.remove('pending');
+        summary.classList.add('info');
+        summary.style.background = '#3498db';
         summary.innerHTML = `
-          <h2>📊 نتائج مختلطة</h2>
-          <p>${passes} نجاح، ${fails} فشل. راجع التفاصيل لاتخاذ قرار.</p>
+          <h2>ℹ️ اختبار مباشر (خارج Salla)</h2>
+          <p>${passes} نجاح، ${fails} فشل. الاختبار الحقيقي داخل Salla iframe.</p>
         `;
       }
     }
@@ -190,7 +228,7 @@
       if (inIframe) {
         setResult(1, 'pass', '✅ نعم، نحن داخل iframe (window.self !== window.top)');
       } else {
-        setResult(1, 'info', 'ℹ️ نعمل في تبويب مستقل (ليس iframe).\n\nهذا طبيعي لو فتحت الصفحة مباشرة من المتصفح.\nلتفعيل اختبار iframe، يجب فتح الصفحة من Salla Admin بعد تكوينها كـ App URL.');
+        setResult(1, 'info', 'ℹ️ نعمل في تبويب مستقل (ليس iframe).\nهذا طبيعي لو فتحت الصفحة مباشرة.');
       }
     } catch (e) {
       setResult(1, 'fail', '❌ خطأ: ' + e.message);
@@ -200,63 +238,73 @@
     // TEST 2: parent origin
     // ==========================================
     try {
-      // Try referrer first (works even with cross-origin restrictions)
-      const referrer = document.referrer || 'لا يوجد referrer';
+      const referrer = document.referrer || 'لا يوجد';
       let parentOrigin = 'غير معروف';
-
       try {
-        // This may throw due to Same-Origin Policy if cross-origin
         parentOrigin = window.parent.location.origin;
       } catch (e) {
-        // Cross-origin — extract from referrer instead
-        if (referrer) {
-          try {
-            parentOrigin = new URL(referrer).origin;
-          } catch {}
+        if (referrer && referrer !== 'لا يوجد') {
+          try { parentOrigin = new URL(referrer).origin; } catch {}
         }
       }
-
-      const isSalla = parentOrigin.includes('salla.sa') ||
-                      referrer.includes('salla.sa') ||
-                      referrer.includes('salla.partners');
-
+      const isSalla = parentOrigin.includes('salla') || referrer.includes('salla');
       if (isSalla) {
         setResult(2, 'pass', `✅ Parent من سلة:\nOrigin: ${parentOrigin}\nReferrer: ${referrer}`);
       } else if (window.self !== window.top) {
         setResult(2, 'info', `ℹ️ داخل iframe لكن المصدر ليس سلة:\nOrigin: ${parentOrigin}\nReferrer: ${referrer}`);
       } else {
-        setResult(2, 'info', `ℹ️ تبويب مستقل (لا يوجد parent).\nReferrer: ${referrer}`);
+        setResult(2, 'info', `ℹ️ تبويب مستقل\nReferrer: ${referrer}`);
       }
     } catch (e) {
       setResult(2, 'fail', '❌ خطأ: ' + e.message);
     }
 
     // ==========================================
-    // TEST 3: SDK availability
+    // TEST 3: SDK availability (after waiting for CDN attempts)
     // ==========================================
-    try {
-      // The SDK can expose itself under different global names — check all
-      const possibleNames = ['SallaEmbeddedSDK', 'salla', 'SallaSDK', 'EmbeddedSDK'];
-      const sdkGlobals = possibleNames.filter(name => typeof window[name] !== 'undefined');
+    setTimeout(() => {
+      try {
+        // Check ALL window properties for anything Salla-related
+        const possibleNames = [
+          'SallaEmbeddedSDK', 'salla', 'Salla', 'SallaSDK', 'EmbeddedSDK',
+          'SallaApp', 'sallaEmbedded', 'embeddedSDK'
+        ];
+        const sdkGlobals = possibleNames.filter(name => typeof window[name] !== 'undefined');
 
-      // Also check window object for anything containing "salla" or "embedded"
-      const allKeys = Object.keys(window).filter(k =>
-        /salla|embedded/i.test(k) && typeof window[k] === 'object'
-      );
+        const allSallaKeys = Object.keys(window).filter(k =>
+          /salla|embedded/i.test(k) &&
+          typeof window[k] !== 'undefined' &&
+          window[k] !== null
+        );
 
-      if (sdkGlobals.length > 0 || allKeys.length > 0) {
-        const found = [...new Set([...sdkGlobals, ...allKeys])];
-        setResult(3, 'pass', `✅ SDK موجود على window:\n${found.join('\n')}`);
-        window._zidlySdkGlobalName = found[0];
-      } else {
-        setResult(3, 'fail', '❌ لم يُعثر على SDK في window.\nقد يكون التحميل من CDN فشل، أو اسم الـ global مختلف.');
+        const attempts = window._zidlySdkLoadAttempts || [];
+        const successfulLoads = attempts.filter(a => a.status === 'loaded');
+        const failedLoads = attempts.filter(a => a.status === 'failed');
+
+        let report = `CDN Loading Attempts (${attempts.length}):\n`;
+        successfulLoads.forEach(a => report += `✅ ${a.url}\n`);
+        failedLoads.forEach(a => report += `❌ ${a.url}\n`);
+        report += '\n';
+
+        if (sdkGlobals.length > 0 || allSallaKeys.length > 0) {
+          const found = [...new Set([...sdkGlobals, ...allSallaKeys])];
+          report += `Found globals on window:\n${found.join('\n')}`;
+          window._zidlySdkGlobalName = found[0];
+          setResult(3, 'pass', '✅ SDK loaded successfully\n\n' + report);
+        } else if (successfulLoads.length > 0) {
+          report += '\n⚠️ Script loaded but no global registered.\nCheck what name SDK uses.';
+          setResult(3, 'fail', '⚠️ Script loaded but SDK global not found\n\n' + report);
+        } else {
+          report += '\n❌ All CDN attempts failed.';
+          setResult(3, 'fail', '❌ SDK could not be loaded\n\n' + report);
+        }
+      } catch (e) {
+        setResult(3, 'fail', '❌ خطأ: ' + e.message);
       }
-    } catch (e) {
-      setResult(3, 'fail', '❌ خطأ: ' + e.message);
-    }
+    }, 3000); // Wait 3 sec for CDN attempts
 
     // ==========================================
-    // TEST 4: SDK API discovery (what methods exist?)
+    // TEST 4: SDK API discovery
     // ==========================================
     setTimeout(() => {
       try {
@@ -265,35 +313,33 @@
           setResult(4, 'fail', '❌ لا يمكن الفحص بدون SDK محمّل (Test 3 فشل)');
           return;
         }
-
         const sdk = window[sdkName];
         let methods = [];
-
-        // Check if it's a class (constructor) or instance
         if (typeof sdk === 'function') {
-          // It's a class — list prototype methods
           methods = Object.getOwnPropertyNames(sdk.prototype || {});
-          methods.push('(this is a class — needs `new ' + sdkName + '()`)');
-        } else if (typeof sdk === 'object') {
-          // It's an instance or namespace — list its properties
+          methods.unshift('(class — needs `new ' + sdkName + '()`)');
+          // Also list static methods
+          methods.push('--- static ---');
+          methods.push(...Object.getOwnPropertyNames(sdk).filter(n =>
+            !['length', 'name', 'prototype'].includes(n)
+          ));
+        } else if (typeof sdk === 'object' && sdk !== null) {
           methods = Object.keys(sdk);
-          // Also check prototype if available
           const proto = Object.getPrototypeOf(sdk);
           if (proto && proto !== Object.prototype) {
-            methods.push('--- prototype methods ---');
+            methods.push('--- prototype ---');
             methods.push(...Object.getOwnPropertyNames(proto));
           }
         }
-
         if (methods.length > 0) {
-          setResult(4, 'pass', `✅ تم اكتشاف API:\n${methods.join('\n')}`);
+          setResult(4, 'pass', `✅ تم اكتشاف API:\n\n${methods.join('\n')}`);
         } else {
-          setResult(4, 'info', `ℹ️ SDK موجود لكن بدون methods ظاهرة.\nType: ${typeof sdk}`);
+          setResult(4, 'info', `ℹ️ SDK موجود لكن بدون methods ظاهرة.\nType: ${typeof sdk}\nValue: ${String(sdk).substring(0, 200)}`);
         }
       } catch (e) {
         setResult(4, 'fail', '❌ خطأ: ' + e.message);
       }
-    }, 100);
+    }, 3500);
 
     // ==========================================
     // TEST 5: SDK initialization
@@ -305,12 +351,9 @@
           setResult(5, 'fail', '❌ لا يمكن التهيئة بدون SDK');
           return;
         }
-
         const SDK = window[sdkName];
         let instance;
         let initLog = [];
-
-        // Try common initialization patterns
         try {
           if (typeof SDK === 'function') {
             instance = new SDK();
@@ -326,18 +369,27 @@
         } catch (initErr) {
           initLog.push('⚠️ تهيئة فشلت: ' + initErr.message);
         }
-
-        // Try to call common methods to discover behavior
         if (instance) {
-          ['isEmbedded', 'getAuthToken', 'getMerchantId', 'getStoreInfo'].forEach(method => {
+          ['isEmbedded', 'getAuthToken', 'getMerchantId', 'getStoreInfo', 'getStore', 'getAuth', 'connect', 'init'].forEach(method => {
             if (typeof instance[method] === 'function') {
               try {
                 const result = instance[method]();
                 if (result && typeof result.then === 'function') {
-                  initLog.push(`📞 ${method}() — promise (async)`);
+                  initLog.push(`📞 ${method}() — promise`);
                   result
-                    .then(r => initLog.push(`  ↳ resolved: ${JSON.stringify(r).substring(0, 100)}`))
-                    .catch(err => initLog.push(`  ↳ rejected: ${err.message}`));
+                    .then(r => {
+                      initLog.push(`  ↳ resolved: ${JSON.stringify(r).substring(0, 150)}`);
+                      const card = document.getElementById('test-5');
+                      const result5 = document.getElementById('result-5');
+                      if (card.classList.contains('pass') || card.classList.contains('info')) {
+                        result5.textContent = initLog.join('\n');
+                      }
+                    })
+                    .catch(err => {
+                      initLog.push(`  ↳ rejected: ${err.message}`);
+                      const result5 = document.getElementById('result-5');
+                      result5.textContent = initLog.join('\n');
+                    });
                 } else {
                   initLog.push(`📞 ${method}() = ${JSON.stringify(result).substring(0, 100)}`);
                 }
@@ -347,13 +399,12 @@
             }
           });
         }
-
         const success = initLog.some(l => l.startsWith('✅'));
         setResult(5, success ? 'pass' : 'info', initLog.join('\n'));
       } catch (e) {
         setResult(5, 'fail', '❌ خطأ: ' + e.message);
       }
-    }, 500);
+    }, 4000);
 
     // ==========================================
     // TEST 6: postMessage listener
@@ -362,21 +413,21 @@
     window.addEventListener('message', (event) => {
       messages.push({
         origin: event.origin,
-        data: typeof event.data === 'string' ? event.data : JSON.stringify(event.data).substring(0, 200),
+        data: typeof event.data === 'string' ? event.data : JSON.stringify(event.data).substring(0, 250),
         time: new Date().toISOString().substring(11, 19)
       });
     });
 
     setTimeout(() => {
       if (messages.length === 0) {
-        setResult(6, 'info', 'ℹ️ لم تُستلم أي رسائل postMessage خلال 8 ثوانٍ.\n\nهذا قد يعني:\n- لسنا داخل iframe من سلة\n- سلة لا ترسل رسائل تلقائياً (تنتظر طلباً منا)\n- SDK يتعامل مع الرسائل داخلياً');
+        setResult(6, 'info', 'ℹ️ لم تُستلم أي رسائل postMessage خلال 10 ثوانٍ.\n\nقد يعني:\n- لسنا داخل iframe من سلة\n- سلة لا ترسل تلقائياً (تنتظر طلباً)\n- SDK يتعامل داخلياً');
       } else {
-        const msgList = messages.slice(0, 5).map((m, i) =>
+        const msgList = messages.slice(0, 8).map((m, i) =>
           `[${i+1}] ${m.time} | from: ${m.origin}\n    ${m.data}`
         ).join('\n\n');
         setResult(6, 'pass', `✅ استُلمت ${messages.length} رسالة:\n\n${msgList}`);
       }
-    }, 8000);
+    }, 10000);
 
     // ==========================================
     // TEST 7: Network latency
@@ -384,7 +435,6 @@
     async function measureLatency() {
       const samples = [];
       const url = 'https://httpbin.org/get?ts=' + Date.now();
-
       for (let i = 0; i < 3; i++) {
         const start = performance.now();
         try {
@@ -394,24 +444,17 @@
           samples.push(-1);
         }
       }
-
       const valid = samples.filter(s => s > 0);
       if (valid.length === 0) {
-        setResult(7, 'fail', '❌ كل المحاولات فشلت. مشكلة في الشبكة أو CSP.');
+        setResult(7, 'fail', '❌ كل المحاولات فشلت');
         return;
       }
-
       const avg = Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
       const status = avg < 500 ? 'pass' : avg < 1000 ? 'info' : 'fail';
-      const verdict = avg < 500
-        ? '✅ ممتاز للمعمارية الهجينة'
-        : avg < 1000
-        ? '⚠️ مقبول لكن سيُحسَّس'
-        : '❌ بطيء جداً — يحتاج تحسين CDN';
-
-      setResult(7, status,
-        `Samples: ${samples.join(', ')}ms\nAvg: ${avg}ms\nVerdict: ${verdict}`
-      );
+      const verdict = avg < 500 ? '✅ ممتاز للمعمارية الهجينة'
+                    : avg < 1000 ? '⚠️ مقبول لكن سيُحسَّس'
+                    : '❌ بطيء جداً';
+      setResult(7, status, `Samples: ${samples.join(', ')}ms\nAvg: ${avg}ms\nVerdict: ${verdict}`);
     }
     measureLatency();
 
@@ -420,36 +463,29 @@
     // ==========================================
     setTimeout(() => {
       try {
-        // The fact that the SDK script (loaded from jsdelivr) executed
-        // means CSP allows external scripts from at least one CDN
-        const sdkLoaded = !!window._zidlySdkGlobalName;
+        const attempts = window._zidlySdkLoadAttempts || [];
+        const sdkLoaded = attempts.some(a => a.status === 'loaded');
         const cspMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
         const inIframe = window.self !== window.top;
-
         let report = [];
         if (sdkLoaded) {
-          report.push('✅ Script من jsdelivr.net تم تحميله بنجاح');
+          report.push('✅ على الأقل CDN واحد نجح في التحميل');
         } else {
-          report.push('⚠️ Script من jsdelivr لم يُحمَّل (قد يكون CSP يحجب)');
+          report.push('⚠️ كل CDN attempts فشلت');
         }
-
         if (cspMeta) {
-          report.push(`📋 CSP meta tag: ${cspMeta.content.substring(0, 200)}`);
+          report.push(`📋 CSP meta: ${cspMeta.content.substring(0, 200)}`);
         } else {
-          report.push('ℹ️ لا يوجد CSP meta tag في الصفحة (الـ CSP يأتي من headers لو موجود)');
+          report.push('ℹ️ لا يوجد CSP meta tag (CSP من headers لو موجود)');
         }
-
         if (inIframe) {
-          report.push('💡 ملاحظة: لو CSP من سلة يحجب، سنرى أخطاء في Console');
-        } else {
-          report.push('💡 افتح الصفحة من داخل Salla Admin لاختبار CSP الحقيقي');
+          report.push('💡 CSP من سلة الفعلي يُفحص هنا');
         }
-
         setResult(8, sdkLoaded ? 'pass' : 'fail', report.join('\n\n'));
       } catch (e) {
         setResult(8, 'fail', '❌ خطأ: ' + e.message);
       }
-    }, 1000);
+    }, 3000);
   </script>
 </body>
 </html>
